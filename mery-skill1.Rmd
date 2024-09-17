@@ -1,0 +1,146 @@
+---
+title: "Multivariable correlation tests"
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    orientation: columns
+    runtime: shiny
+    vertical_layout: fill
+    theme: 
+      version: 4
+      bootswatch: cerulean
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+
+
+Data  
+=======================================================================
+
+Column {data-width=170}
+-----------------------------------------------------------------------
+
+### Choices
+
+```{r, echo=FALSE}
+library(shiny)
+library(dplyr)
+library(gridExtra)      # combining multiple plots
+library(grid)           # combining multiple plots
+library(corrgram)       # visualizing data       
+#library(corrplot)       # visualizing data       
+library(ggcorrplot)       # visualizing data       
+library(Hmisc)          # produces correlation matrices with p-values
+library(ppcor)          # assesses partial correlations
+library(conjoint)       #conjoint analysis
+library(CatEncoders)
+
+
+fileInput("file1", "Choose CSV File",
+  accept = c("text/csv",
+             "text/comma-separated-values,text/plain",
+             ".csv")
+            )
+      #tags$hr(),
+checkboxInput("header", "Header", TRUE)
+      # 
+selectInput(inputId = "test",
+              label = "Statistic Test:",
+              choices = c("pearson","spearman", "Kendall",
+                          "Conjoint"),
+              selected = "Correlation"
+  )
+varSelectInput("variables", "Variable:", data, multiple = TRUE)#, width=2)
+
+#    mainPanel(
+plotOutput("corrPlot", width ="100%")  
+#    )
+#  )
+#}
+values <- reactiveValues(data = NULL)
+observe({ 
+    x <- input$file1
+    if (!is.null(x)){
+      print (x)
+      data <- read.csv(file = input$file1$datapath, header = input$header)
+     
+      #print(values$data)
+      updateVarSelectInput(session, "variables", data = data)
+    }
+  })
+observe({
+  y <- input$variables
+  print(y)
+})
+
+``` 
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+# corrGraph  <- function(input, output, session, ...) {
+#  
+#   output$corrPlot <- 
+library(CatEncoders)
+
+renderPlot({ 
+  if ( length(input$variables) != 0) {
+    data <- read.csv(file = input$file1$datapath, header = input$header)
+    #print(data)
+    #lbl <- LabelEncoder$new()
+    for (i in colnames(df)){
+      if (! is.numeric(df[[i]])){
+        lbl$fit(df[[i]])
+        df[[i]] <- lbl$fit_transform(df[[i]])
+      }
+    }
+    #write.csv(df, "Path to export the DataFrame\\File Name.csv", row.names=FALSE)
+        #
+        #
+    d4corr <- data
+    if ( length(input$variables) != 0) {
+      d4corr <-data %>% dplyr::select(!!!input$variables)
+      if ( input$test== "Conjoint" ) {
+          profnm<-caFactorialDesign(data=d4corr, type='fractional')
+      }
+      else {
+        if ( input$test == "Kendall"){
+          corr1.r <- cor(d4corr, method="kendall")
+        }
+        else {
+          #--------------For parametric methods   multiple variables: data %>% dplyr.... down 
+          corr1 <- rcorr(as.matrix(d4corr), type = input$test)
+          corr1.r= data.frame(corr1$r)
+        }
+        print ("The corr matrix ----------------")
+        print (as.matrix(corr1.r))
+        par(bg = "#fdfdfd")
+        #            corrgram(corr1, lower.panel = panel.shade, upper.panel = panel.pts)
+        #   OR    corr1 <- round(cor(data %>% dplyr::select(!!!input$variables)), 1)
+        ggcorrplot(as.matrix(corr1.r), lab = TRUE, hc.order = TRUE, outline.color = "white")#method = "circle") type = "lower",    
+      }
+    }
+  }
+  })
+#}
+```
+
+
+
+Models
+=======================================================================
+
+
+<!-- Para ver temas etc.: -->
+<!-- https://rstudio.github.io/flexdashboard/articles/theme.html -->
+<!-- https://bootswatch.com/cerulean/ -->
+
+
+<!-- Gradient boosted models: -->
+<!--  https://www.youtube.com/watch?v=o6seqpMJSTI --> 
